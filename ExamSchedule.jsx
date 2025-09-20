@@ -16,7 +16,7 @@ export default function ExamSchedule() {
   const [selectedExam, setSelectedExam] = useState('exam00');
   const [startDateTime, setStartDateTime] = useState('');
   const [selectedSlot, setSelectedSlot] = useState(null);
-  const [selectedProctor, setSelectedProctor] = useState('');
+  const [selectedProctors, setSelectedProctors] = useState([]);
 
   const currentExam = state.exams.find(exam => exam.id === selectedExam);
   const hasSlots = currentExam && currentExam.slots.length > 0;
@@ -28,10 +28,12 @@ export default function ExamSchedule() {
     actions.generateSlots(selectedExam, startTime);
   };
 
-  const handleAssignProctor = (proctorId) => {
-    if (!selectedSlot || !proctorId) return;
-    
-    actions.assignProctorToSlot(selectedExam, selectedSlot.id, proctorId);
+  const handleAssignProctors = (proctorIds) => {
+    if (!selectedSlot || !proctorIds?.length) return;
+    const unique = [...new Set(proctorIds)];
+    unique.forEach((pid) => {
+      actions.assignProctorToSlot(selectedExam, selectedSlot.id, pid);
+    });
   };
 
   const handleRemoveProctor = (slotId, proctorId) => {
@@ -208,7 +210,7 @@ export default function ExamSchedule() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleRemoveProctor(slot.id)}>
+                                <AlertDialogAction onClick={() => handleRemoveProctor(slot.id, proctor.id)}>
                                   Remove
                                 </AlertDialogAction>
                               </AlertDialogFooter>
@@ -249,22 +251,33 @@ export default function ExamSchedule() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Available Proctors</Label>
-                <Select
-                  value={selectedProctor}
-                  onValueChange={setSelectedProctor}
-                  multiple // Enable multiple selection
-                >
+                {/* Simple multi-select using checkboxes since our Select stub is single-select */}
+                <div className="max-h-60 overflow-auto rounded-md border p-2">
                   <SelectTrigger>
                     <SelectValue placeholder="Choose proctors" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {allAssignableOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.name} {option.id.startsWith("role-") ? "" : `(ID: ${option.id})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <div className="mt-2 space-y-2">
+                    {allAssignableOptions.map((option) => {
+                      const checked = selectedProctors.includes(option.id);
+                      return (
+                        <label key={option.id} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedProctors(prev => [...new Set([...prev, option.id])]);
+                              } else {
+                                setSelectedProctors(prev => prev.filter(id => id !== option.id));
+                              }
+                            }}
+                          />
+                          <span>{option.name} {option.id.startsWith('role-') ? '' : `(ID: ${option.id})`}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
               
               {availableProctors.length === 0 && (
@@ -277,21 +290,21 @@ export default function ExamSchedule() {
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => {
                 setSelectedSlot(null);
-                setSelectedProctor('');
+                setSelectedProctors([]);
               }}>
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction 
                 onClick={() => {
-                  if (selectedProctor) {
-                    handleAssignProctor(selectedProctor);
+                  if (selectedProctors.length) {
+                    handleAssignProctors(selectedProctors);
                     setSelectedSlot(null);
-                    setSelectedProctor("");
+                    setSelectedProctors([]);
                   }
                 }}
-                disabled={!selectedProctor}
+                disabled={!selectedProctors.length}
               >
-                Assign Proctor
+                Assign Selected
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
