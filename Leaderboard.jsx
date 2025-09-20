@@ -1,10 +1,10 @@
 import React from 'react';
-import { useApp } from '../contexts/AppContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useApp } from './AppContext.jsx';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
+import { Badge } from './components/ui/badge';
+import { Avatar, AvatarFallback } from './components/ui/avatar';
 import { Trophy, Medal, Award, Clock, Calendar, Star } from 'lucide-react';
-import { getProctorStats, formatDateTime } from '../lib/utils';
+import { getProctorStats, formatDateTime } from './utils.js';
 
 export default function Leaderboard() {
   const { state } = useApp();

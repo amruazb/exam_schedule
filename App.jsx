@@ -1,12 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AppProvider } from './contexts/AppContext';
-import Layout from './components/Layout';
-import Dashboard from './components/Dashboard';
-import ExamSchedule from './components/ExamSchedule';
-import Leaderboard from './components/Leaderboard';
-import AdminPanel from './components/AdminPanel';
-import CalendarView from './components/CalendarView';
+import { AppProvider } from './AppContext.jsx';
+import Layout from './Layout.jsx';
+import Dashboard from './Dashboard.jsx';
+import ExamSchedule from './ExamSchedule.jsx';
+import Leaderboard from './Leaderboard.jsx';
+import AdminPanel from './AdminPanel.jsx';
+import CalendarView from './CalendarView.jsx';
 import './App.css';
 
 function App() {

@@ -1,11 +1,11 @@
 import React from 'react';
-import { useApp } from '../contexts/AppContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { useApp } from './AppContext.jsx';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
+import { Badge } from './components/ui/badge';
+import { Input } from './components/ui/input';
+import { Button } from './components/ui/button';
 import { Search, Users, Calendar, Trophy, Clock } from 'lucide-react';
-import { getProctorStats, formatDateTime } from '../lib/utils';
+import { getProctorStats, formatDateTime } from './utils.js';
 import { useState } from 'react';
 
 export default function Dashboard() {

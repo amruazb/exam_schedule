@@ -9,8 +9,8 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Button } from './components/ui/button';
+import { cn } from './utils.js';
 import { useState } from 'react';
 
 const navigation = [

@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { useApp } from '../contexts/AppContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useApp } from './AppContext.jsx';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
+import { Button } from './components/ui/button';
+import { Badge } from './components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, User, Calendar } from 'lucide-react';
-import { formatTime, formatDateTime } from '../lib/utils';
+import { formatTime, formatDateTime } from './utils.js';
 
 export default function CalendarView() {
   const { state } = useApp();
