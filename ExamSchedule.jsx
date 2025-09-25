@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from './components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './components/ui/alert-dialog';
-import { Calendar, Clock, User, UserPlus, UserMinus, Settings } from 'lucide-react';
+import { Calendar, Clock, User, UserPlus, UserMinus, Settings, Search, X } from 'lucide-react';
 import { formatDateTime, formatTime, getAvailableProctors } from './utils.js';
 
 export default function ExamSchedule() {
@@ -21,6 +21,8 @@ export default function ExamSchedule() {
   const [bulkAssignMode, setBulkAssignMode] = useState(false);
   const [removeAllDialogSlot, setRemoveAllDialogSlot] = useState(null);
   const [removeProctorDialog, setRemoveProctorDialog] = useState(null); // { slotId, proctorId, proctorName }
+  const [searchQuery, setSearchQuery] = useState('');
+  const [proctorSearchQuery, setProctorSearchQuery] = useState('');
 
   const currentExam = state.exams.find(exam => exam.id === selectedExam);
   const hasSlots = currentExam && currentExam.slots.length > 0;
@@ -131,6 +133,33 @@ export default function ExamSchedule() {
     return combined;
   };
 
+  // Helper function to filter slots based on search query
+  const filterSlotsByQuery = (slot) => {
+    if (!searchQuery) return true;
+    
+    const query = searchQuery.toLowerCase();
+    
+    // Get proctor information for this slot
+    const slotProctors = slot.proctorIds.map(id => getSlotProctor(id));
+    
+    // Check if the query matches any proctor name or ID
+    const proctorMatch = slotProctors.some(proctor => 
+      proctor?.name?.toLowerCase().includes(query) || 
+      proctor?.id?.toLowerCase().includes(query)
+    );
+    
+    // Check if query matches the time
+    const timeStart = formatTime(slot.startTime).toLowerCase();
+    const timeEnd = formatTime(slot.endTime).toLowerCase();
+    const dateTimeStr = formatDateTime(slot.startTime).toLowerCase();
+    const timeMatch = 
+      timeStart.includes(query) || 
+      timeEnd.includes(query) || 
+      dateTimeStr.includes(query);
+    
+    return proctorMatch || timeMatch;
+  };
+
   const availableProctors = selectedSlot 
     ? selectedSlot.bulk 
       ? getAvailableProctorsForBulk()
@@ -169,7 +198,13 @@ export default function ExamSchedule() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="exam-select">Select Exam</Label>
-              <Select value={selectedExam} onValueChange={setSelectedExam}>
+              <Select 
+                value={selectedExam} 
+                onValueChange={(value) => {
+                  setSelectedExam(value);
+                  setSearchQuery(''); // Clear search when changing exams
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose an exam" />
                 </SelectTrigger>
@@ -238,6 +273,38 @@ export default function ExamSchedule() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Search Input */}
+            <div className="mb-4">
+              <div className="flex items-center space-x-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search slots by proctor name, ID, or time..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 pr-8"
+                  />
+                  {searchQuery && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="absolute right-0 top-0 h-full px-3"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {searchQuery && (
+                <div className="mt-2 text-sm text-muted-foreground">
+                  <span>
+                    {currentExam.slots.filter(filterSlotsByQuery).length} results for "{searchQuery}"
+                  </span>
+                </div>
+              )}
+            </div>
+            
             {/* Bulk Assignment Controls */}
             <div className="mb-6 p-4 bg-muted/50 rounded-lg border">
               <div className="flex items-center justify-between mb-3">
@@ -286,9 +353,11 @@ export default function ExamSchedule() {
             </div>
 
             <div className="space-y-4">
-              {currentExam.slots.map((slot, index) => {
-                const proctors = slot.proctorIds.map(id => getSlotProctor(id));
-                const isAssigned = proctors.length > 0;
+              {currentExam.slots
+                .filter(filterSlotsByQuery)
+                .map((slot, index) => {
+                  const proctors = slot.proctorIds.map(id => getSlotProctor(id));
+                  const isAssigned = proctors.length > 0;
 
                 return (
                   <div
@@ -398,7 +467,17 @@ export default function ExamSchedule() {
                     </div>
                   </div>
                 );
-              })}
+              })
+                
+              }
+
+              {/* Show message when no matching slots are found */}
+              {searchQuery && 
+               currentExam.slots.filter(filterSlotsByQuery).length === 0 && (
+                <div className="p-8 text-center">
+                  <p className="text-muted-foreground">No slots matching "{searchQuery}" found</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -409,6 +488,7 @@ export default function ExamSchedule() {
         <AlertDialog open={!!selectedSlot} onOpenChange={() => {
           setSelectedSlot(null);
           setSelectedProctors([]);
+          setProctorSearchQuery('');
         }}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -451,7 +531,12 @@ export default function ExamSchedule() {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        const allIds = allAssignableOptions.map(option => option.id);
+                        const filteredOptions = allAssignableOptions.filter(option => {
+                          if (!proctorSearchQuery) return true;
+                          const query = proctorSearchQuery.toLowerCase();
+                          return option.name.toLowerCase().includes(query) || option.id.toLowerCase().includes(query);
+                        });
+                        const allIds = filteredOptions.map(option => option.id);
                         setSelectedProctors(allIds);
                       }}
                       className="text-xs"
@@ -468,24 +553,62 @@ export default function ExamSchedule() {
                     </Button>
                   </div>
                 </div>
+
+                {/* Search Input for Proctors */}
+                <div className="mb-2">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Search proctors by name or ID..."
+                      value={proctorSearchQuery}
+                      onChange={(e) => setProctorSearchQuery(e.target.value)}
+                      className="pl-8 pr-8"
+                    />
+                    {proctorSearchQuery && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setProctorSearchQuery('')}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {proctorSearchQuery && (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {allAssignableOptions.filter(option => {
+                        const query = proctorSearchQuery.toLowerCase();
+                        return option.name.toLowerCase().includes(query) || option.id.toLowerCase().includes(query);
+                      }).length} results for "{proctorSearchQuery}"
+                    </div>
+                  )}
+                </div>
+                
                 {/* Simple multi-select using checkboxes since our Select stub is single-select */}
                 <div className="max-h-60 overflow-auto rounded-md border p-2">
                   <SelectTrigger>
                     <SelectValue placeholder="Choose proctors" />
                   </SelectTrigger>
                   <div className="mt-2 space-y-2">
-                    {allAssignableOptions.map((option) => {
-                      const checked = selectedProctors.includes(option.id);
-                      const isAlreadyAssigned = !selectedSlot.bulk && selectedSlot.proctorIds?.includes(option.id);
-                      const isRoleOption = option.id.startsWith('role-');
-                      
-                      return (
-                        <label 
-                          key={option.id} 
-                          className={`flex items-center gap-2 text-sm p-2 rounded hover:bg-accent/50 ${
-                            isAlreadyAssigned ? 'bg-blue-50 border border-blue-200' : ''
-                          }`}
-                        >
+                    {allAssignableOptions
+                      .filter(option => {
+                        if (!proctorSearchQuery) return true;
+                        const query = proctorSearchQuery.toLowerCase();
+                        return option.name.toLowerCase().includes(query) || option.id.toLowerCase().includes(query);
+                      })
+                      .map((option) => {
+                        const checked = selectedProctors.includes(option.id);
+                        const isAlreadyAssigned = !selectedSlot.bulk && selectedSlot.proctorIds?.includes(option.id);
+                        const isRoleOption = option.id.startsWith('role-');
+                        
+                        return (
+                          <label 
+                            key={option.id} 
+                            className={`flex items-center gap-2 text-sm p-2 rounded hover:bg-accent/50 ${
+                              isAlreadyAssigned ? 'bg-blue-50 border border-blue-200' : ''
+                            }`}
+                          >
                           <input
                             type="checkbox"
                             checked={checked}
@@ -514,6 +637,17 @@ export default function ExamSchedule() {
                   </div>
                 </div>
                 
+                {/* Show message when no matching proctors are found */}
+                {proctorSearchQuery && 
+                  allAssignableOptions.filter(option => {
+                    const query = proctorSearchQuery.toLowerCase();
+                    return option.name.toLowerCase().includes(query) || option.id.toLowerCase().includes(query);
+                  }).length === 0 && (
+                  <div className="p-4 text-center">
+                    <p className="text-muted-foreground">No proctors matching "{proctorSearchQuery}" found</p>
+                  </div>
+                )}
+                
                 {selectedProctors.length > 0 && (
                   <div className="mt-2 p-2 bg-muted rounded text-sm">
                     <strong>{selectedProctors.length}</strong> proctor{selectedProctors.length !== 1 ? 's' : ''} selected
@@ -526,7 +660,7 @@ export default function ExamSchedule() {
                 )}
               </div>
               
-              {availableProctors.length === 0 && (
+              {availableProctors.length === 0 && !proctorSearchQuery && (
                 <p className="text-sm text-muted-foreground">
                   {selectedSlot.bulk 
                     ? "No proctors are available for all selected time slots. Try selecting fewer slots or check for scheduling conflicts."
