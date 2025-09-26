@@ -1,5 +1,23 @@
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge"
+export function getProctorSlots(proctorId, exams) {
+  const slots = [];
+  
+  exams.forEach(exam => {
+    if (!Array.isArray(exam.slots)) return;
+    
+    exam.slots.forEach(slot => {
+      if (Array.isArray(slot.proctorIds) && slot.proctorIds.includes(proctorId)) {
+        slots.push({
+          ...slot,
+          examName: exam.name
+        });
+      }
+    });
+  });
+  
+  return slots;
+}wind-merge"
 
 export function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -44,10 +62,8 @@ export function getProctorSlots(proctorId, exams) {
   const slots = [];
   
   exams.forEach(exam => {
-    if (!Array.isArray(exam.slots)) return;
-    
     exam.slots.forEach(slot => {
-      if (Array.isArray(slot.proctorIds) && slot.proctorIds.includes(proctorId)) {
+      if (slot.proctorIds && slot.proctorIds.includes(proctorId)) {
         slots.push({
           ...slot,
           examName: exam.name
@@ -56,7 +72,29 @@ export function getProctorSlots(proctorId, exams) {
     });
   });
   
-  return slots;
+  return slots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+}
+
+// Format date and time for display
+export function formatDateTime(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleString('en-US', {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+// Format time only
+export function formatTime(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 }
 
 // Generate a unique ID
@@ -78,7 +116,7 @@ export function getProctorStats(proctors, exams, pointsPerSlot = 10) {
       slots: slots.length,
       assignedSlots: slots
     };
-  });
+  }).sort((a, b) => b.points - a.points);
 }
 
 // Check if a slot is available (not assigned to any proctor)
@@ -119,16 +157,16 @@ export function getAvailableProctors(proctors, exams, targetSlotTime) {
 export function validateProctor(proctor) {
   const errors = {};
   
-  if (!proctor.id || proctor.id.trim() === "") {
-    errors.id = "Proctor ID is required";
+  if (!proctor.id || proctor.id.trim() === '') {
+    errors.id = 'Proctor ID is required';
   }
   
-  if (!proctor.name || proctor.name.trim() === "") {
-    errors.name = "Name is required";
+  if (!proctor.name || proctor.name.trim() === '') {
+    errors.name = 'Name is required';
   }
   
   if (proctor.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(proctor.email)) {
-    errors.email = "Invalid email format";
+    errors.email = 'Invalid email format';
   }
   
   return {
@@ -141,18 +179,18 @@ export function validateProctor(proctor) {
 export function validateExam(exam) {
   const errors = {};
   
-  if (!exam.id || exam.id.trim() === "") {
-    errors.id = "Exam ID is required";
+  if (!exam.id || exam.id.trim() === '') {
+    errors.id = 'Exam ID is required';
   } else if (!/^[a-zA-Z0-9-_]+$/.test(exam.id)) {
-    errors.id = "Exam ID should contain only alphanumeric characters, hyphens, and underscores";
+    errors.id = 'Exam ID should contain only alphanumeric characters, hyphens, and underscores';
   }
   
-  if (!exam.name || exam.name.trim() === "") {
-    errors.name = "Exam name is required";
+  if (!exam.name || exam.name.trim() === '') {
+    errors.name = 'Exam name is required';
   }
   
   if (!exam.duration || exam.duration <= 0) {
-    errors.duration = "Duration must be a positive number";
+    errors.duration = 'Duration must be a positive number';
   }
   
   return {
@@ -161,28 +199,3 @@ export function validateExam(exam) {
   };
 }
 
-// Format date and time for display
-export function formatDateTime(isoString) {
-  if (!isoString) return "";
-  
-  const date = new Date(isoString);
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short", 
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-}
-
-// Format time only for display
-export function formatTime(isoString) {
-  if (!isoString) return "";
-  
-  const date = new Date(isoString);
-  return date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-}

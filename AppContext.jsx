@@ -63,7 +63,23 @@ const initialState = {
     { id: 'hassaleh', name: 'Hassaleh', email: '' },
     { id: 'dimirzoe', name: 'Dimirzoe', email: '' },
     { id: 'tabadawi', name: 'Tabadawi', email: '' },
-
+  ],
+  volunteers: [
+    { id: 'vol001', name: 'John Volunteer', email: 'john@example.com', skills: 'First aid' },
+    { id: 'vol002', name: 'Jane Helper', email: 'jane@example.com', skills: 'Technical support' }
+  ],
+  events: [
+    { 
+      id: 'event001',
+      name: 'Orientation Day',
+      date: '2025-10-10',
+      startTime: '09:00',
+      duration: 4,
+      description: 'New student orientation',
+      requiredVolunteers: 3,
+      volunteerIds: [],
+      slots: []
+    }
   ],
   isAdminLoggedIn: false,
   pointsPerSlot: 10
@@ -79,7 +95,21 @@ const ActionTypes = {
   GENERATE_SLOTS: 'GENERATE_SLOTS',
   SET_ADMIN_LOGIN: 'SET_ADMIN_LOGIN',
   LOAD_DATA: 'LOAD_DATA',
-  SAVE_DATA: 'SAVE_DATA'
+  SAVE_DATA: 'SAVE_DATA',
+  ADD_EXAM: 'ADD_EXAM',
+  UPDATE_EXAM: 'UPDATE_EXAM',
+  DELETE_EXAM: 'DELETE_EXAM',
+  ADD_VOLUNTEER: 'ADD_VOLUNTEER',
+  UPDATE_VOLUNTEER: 'UPDATE_VOLUNTEER',
+  DELETE_VOLUNTEER: 'DELETE_VOLUNTEER',
+  ADD_EVENT: 'ADD_EVENT',
+  UPDATE_EVENT: 'UPDATE_EVENT',
+  DELETE_EVENT: 'DELETE_EVENT',
+  ASSIGN_VOLUNTEER_TO_EVENT: 'ASSIGN_VOLUNTEER_TO_EVENT',
+  REMOVE_VOLUNTEER_FROM_EVENT: 'REMOVE_VOLUNTEER_FROM_EVENT',
+  GENERATE_EVENT_SLOTS: 'GENERATE_EVENT_SLOTS',
+  ASSIGN_VOLUNTEER_TO_EVENT_SLOT: 'ASSIGN_VOLUNTEER_TO_EVENT_SLOT',
+  REMOVE_VOLUNTEER_FROM_EVENT_SLOT: 'REMOVE_VOLUNTEER_FROM_EVENT_SLOT'
 };
 
 // Reducer function
@@ -98,6 +128,26 @@ function appReducer(state, action) {
           proctor.id === action.payload.id ? action.payload : proctor
         )
       };
+      
+    case ActionTypes.ADD_EXAM:
+      return {
+        ...state,
+        exams: [...state.exams, {
+          ...action.payload,
+          slots: []
+        }]
+      };
+      
+    case ActionTypes.UPDATE_EXAM:
+      return {
+        ...state,
+        exams: state.exams.map(exam =>
+          exam.id === action.payload.id ? {
+            ...action.payload,
+            slots: exam.slots // Preserve existing slots
+          } : exam
+        )
+      };
 
     case ActionTypes.DELETE_PROCTOR:
       return {
@@ -105,10 +155,10 @@ function appReducer(state, action) {
         proctors: state.proctors.filter(proctor => proctor.id !== action.payload),
         exams: state.exams.map(exam => ({
           ...exam,
-          slots: exam.slots.map(slot => ({
+          slots: Array.isArray(exam.slots) ? exam.slots.map(slot => ({
             ...slot,
-            proctorIds: slot.proctorIds.filter(id => id !== action.payload)
-          }))
+            proctorIds: Array.isArray(slot.proctorIds) ? slot.proctorIds.filter(id => id !== action.payload) : []
+          })) : []
         }))
       };
 
@@ -119,11 +169,14 @@ function appReducer(state, action) {
           exam.id === action.payload.examId
             ? {
                 ...exam,
-                slots: exam.slots.map(slot =>
+                slots: Array.isArray(exam.slots) ? exam.slots.map(slot =>
                   slot.id === action.payload.slotId
-                    ? { ...slot, proctorIds: [...new Set([...slot.proctorIds, action.payload.proctorId])] }
+                    ? { 
+                        ...slot, 
+                        proctorIds: [...new Set([...(Array.isArray(slot.proctorIds) ? slot.proctorIds : []), action.payload.proctorId])] 
+                      }
                     : slot
-                )
+                ) : []
               }
             : exam
         )
@@ -136,11 +189,16 @@ function appReducer(state, action) {
           exam.id === action.payload.examId
             ? {
                 ...exam,
-                slots: exam.slots.map(slot =>
+                slots: Array.isArray(exam.slots) ? exam.slots.map(slot =>
                   slot.id === action.payload.slotId
-                    ? { ...slot, proctorIds: slot.proctorIds.filter(id => id !== action.payload.proctorId) }
+                    ? { 
+                        ...slot, 
+                        proctorIds: Array.isArray(slot.proctorIds) 
+                          ? slot.proctorIds.filter(id => id !== action.payload.proctorId) 
+                          : [] 
+                      }
                     : slot
-                )
+                ) : []
               }
             : exam
         )
@@ -166,6 +224,145 @@ function appReducer(state, action) {
       return {
         ...state,
         ...action.payload
+      };
+      
+    case ActionTypes.DELETE_EXAM:
+      return {
+        ...state,
+        exams: state.exams.filter(exam => exam.id !== action.payload)
+      };
+      
+    case ActionTypes.ADD_VOLUNTEER:
+      return {
+        ...state,
+        volunteers: [...(state.volunteers || []), action.payload]
+      };
+
+    case ActionTypes.UPDATE_VOLUNTEER:
+      return {
+        ...state,
+        volunteers: (state.volunteers || []).map(volunteer =>
+          volunteer.id === action.payload.id ? action.payload : volunteer
+        )
+      };
+
+    case ActionTypes.DELETE_VOLUNTEER:
+      return {
+        ...state,
+        volunteers: (state.volunteers || []).filter(volunteer => volunteer.id !== action.payload),
+        events: (state.events || []).map(event => ({
+          ...event,
+          volunteerIds: Array.isArray(event.volunteerIds) 
+            ? event.volunteerIds.filter(id => id !== action.payload) 
+            : []
+        }))
+      };
+      
+    case ActionTypes.ADD_EVENT:
+      return {
+        ...state,
+        events: [...(state.events || []), action.payload]
+      };
+
+    case ActionTypes.UPDATE_EVENT:
+      return {
+        ...state,
+        events: (state.events || []).map(event =>
+          event.id === action.payload.id ? {
+            ...action.payload,
+            volunteerIds: event.volunteerIds || [] // Preserve existing volunteer assignments
+          } : event
+        )
+      };
+
+    case ActionTypes.DELETE_EVENT:
+      return {
+        ...state,
+        events: (state.events || []).filter(event => event.id !== action.payload)
+      };
+      
+    case ActionTypes.ASSIGN_VOLUNTEER_TO_EVENT:
+      return {
+        ...state,
+        events: (state.events || []).map(event =>
+          event.id === action.payload.eventId
+            ? {
+                ...event,
+                volunteerIds: [...new Set([...(Array.isArray(event.volunteerIds) ? event.volunteerIds : []), action.payload.volunteerId])]
+              }
+            : event
+        )
+      };
+
+    case ActionTypes.REMOVE_VOLUNTEER_FROM_EVENT:
+      return {
+        ...state,
+        events: (state.events || []).map(event =>
+          event.id === action.payload.eventId
+            ? {
+                ...event,
+                volunteerIds: Array.isArray(event.volunteerIds) 
+                  ? event.volunteerIds.filter(id => id !== action.payload.volunteerId) 
+                  : []
+              }
+            : event
+        )
+      };
+      
+    case ActionTypes.GENERATE_EVENT_SLOTS:
+      return {
+        ...state,
+        events: (state.events || []).map(event =>
+          event.id === action.payload.eventId
+            ? { ...event, slots: action.payload.slots }
+            : event
+        )
+      };
+      
+    case ActionTypes.ASSIGN_VOLUNTEER_TO_EVENT_SLOT:
+      return {
+        ...state,
+        events: (state.events || []).map(event =>
+          event.id === action.payload.eventId
+            ? {
+                ...event,
+                slots: Array.isArray(event.slots) 
+                  ? event.slots.map(slot =>
+                      slot.id === action.payload.slotId
+                        ? { 
+                            ...slot, 
+                            volunteerIds: [...new Set([...(Array.isArray(slot.volunteerIds) ? slot.volunteerIds : []), action.payload.volunteerId])]
+                          }
+                        : slot
+                    ) 
+                  : []
+              }
+            : event
+        )
+      };
+      
+    case ActionTypes.REMOVE_VOLUNTEER_FROM_EVENT_SLOT:
+      return {
+        ...state,
+        events: (state.events || []).map(event =>
+          event.id === action.payload.eventId
+            ? {
+                ...event,
+                slots: Array.isArray(event.slots) 
+                  ? event.slots.map(slot =>
+                      slot.id === action.payload.slotId
+                        ? { 
+                            ...slot, 
+                            volunteerIds: Array.isArray(slot.volunteerIds) 
+                              ? slot.volunteerIds.filter(id => id !== action.payload.volunteerId) 
+                              : []
+                          }
+                        : slot
+                    ) 
+                  : []
+              }
+            : event
+        )
       };
 
     default:
@@ -211,6 +408,18 @@ export function AppProvider({ children }) {
     deleteProctor: (proctorId) => {
       dispatch({ type: ActionTypes.DELETE_PROCTOR, payload: proctorId });
     },
+    
+    addExam: (exam) => {
+      dispatch({ type: ActionTypes.ADD_EXAM, payload: exam });
+    },
+    
+    updateExam: (exam) => {
+      dispatch({ type: ActionTypes.UPDATE_EXAM, payload: exam });
+    },
+    
+    deleteExam: (examId) => {
+      dispatch({ type: ActionTypes.DELETE_EXAM, payload: examId });
+    },
 
     assignProctorToSlot: (examId, slotId, proctorId) => {
       dispatch({
@@ -255,6 +464,84 @@ export function AppProvider({ children }) {
 
     setAdminLogin: (isLoggedIn) => {
       dispatch({ type: ActionTypes.SET_ADMIN_LOGIN, payload: isLoggedIn });
+    },
+    
+    addVolunteer: (volunteer) => {
+      dispatch({ type: ActionTypes.ADD_VOLUNTEER, payload: volunteer });
+    },
+
+    updateVolunteer: (volunteer) => {
+      dispatch({ type: ActionTypes.UPDATE_VOLUNTEER, payload: volunteer });
+    },
+
+    deleteVolunteer: (volunteerId) => {
+      dispatch({ type: ActionTypes.DELETE_VOLUNTEER, payload: volunteerId });
+    },
+    
+    addEvent: (event) => {
+      dispatch({ type: ActionTypes.ADD_EVENT, payload: event });
+    },
+    
+    updateEvent: (event) => {
+      dispatch({ type: ActionTypes.UPDATE_EVENT, payload: event });
+    },
+    
+    deleteEvent: (eventId) => {
+      dispatch({ type: ActionTypes.DELETE_EVENT, payload: eventId });
+    },
+    
+    assignVolunteerToEvent: (eventId, volunteerId) => {
+      dispatch({
+        type: ActionTypes.ASSIGN_VOLUNTEER_TO_EVENT,
+        payload: { eventId, volunteerId }
+      });
+    },
+    
+    removeVolunteerFromEvent: (eventId, volunteerId) => {
+      dispatch({
+        type: ActionTypes.REMOVE_VOLUNTEER_FROM_EVENT,
+        payload: { eventId, volunteerId }
+      });
+    },
+    
+    generateEventSlots: (eventId, startTime) => {
+      const event = state.events?.find((e) => e.id === eventId);
+      if (!event) return;
+
+      const slots = [];
+      const totalSlots = event.duration || 4; // Default to 4 hours if not specified
+
+      for (let i = 0; i < totalSlots; i++) {
+        const slotTime = new Date(startTime);
+        slotTime.setHours(slotTime.getHours() + i);
+
+        slots.push({
+          id: `${eventId}-slot-${i}`,
+          eventId,
+          startTime: slotTime.toISOString(),
+          endTime: new Date(slotTime.getTime() + 60 * 60 * 1000).toISOString(), // +1 hour
+          volunteerIds: [],
+        });
+      }
+
+      dispatch({
+        type: ActionTypes.GENERATE_EVENT_SLOTS,
+        payload: { eventId, slots },
+      });
+    },
+    
+    assignVolunteerToEventSlot: (eventId, slotId, volunteerId) => {
+      dispatch({
+        type: ActionTypes.ASSIGN_VOLUNTEER_TO_EVENT_SLOT,
+        payload: { eventId, slotId, volunteerId }
+      });
+    },
+    
+    removeVolunteerFromEventSlot: (eventId, slotId, volunteerId) => {
+      dispatch({
+        type: ActionTypes.REMOVE_VOLUNTEER_FROM_EVENT_SLOT,
+        payload: { eventId, slotId, volunteerId }
+      });
     },
   };
 

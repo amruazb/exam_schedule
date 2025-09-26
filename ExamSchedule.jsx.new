@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useApp } from './AppContext.jsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
 import { Button } from './components/ui/button';
@@ -8,22 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from './components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './components/ui/alert-dialog';
-import { Calendar, Clock, User, UserPlus, UserMinus, Settings, Search, X, FileText, CalendarX } from 'lucide-react';
+import { Calendar, Clock, User, UserPlus, UserMinus, Settings, Search, X, FileText } from 'lucide-react';
 import { formatDateTime, formatTime, getAvailableProctors } from './utils.js';
 
 export default function ExamSchedule() {
   const { state, actions } = useApp();
   const [scheduleType, setScheduleType] = useState('exams'); // 'exams' or 'events'
   const [selectedExam, setSelectedExam] = useState(state.exams.length > 0 ? state.exams[0].id : '');
-  const [selectedEvent, setSelectedEvent] = useState('');
+  const [selectedEvent, setSelectedEvent] = useState(state.events?.length > 0 ? state.events[0].id : '');
   const [startDateTime, setStartDateTime] = useState('');
-  
-  // Effect to update selectedEvent when events change or tab changes
-  useEffect(() => {
-    if (scheduleType === 'events' && state.events?.length > 0 && !selectedEvent) {
-      setSelectedEvent(state.events[0].id);
-    }
-  }, [scheduleType, state.events, selectedEvent]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedVolunteerSlot, setSelectedVolunteerSlot] = useState(null);
   const [selectedProctors, setSelectedProctors] = useState([]);
@@ -279,46 +272,26 @@ export default function ExamSchedule() {
               </div>
             </div>
           ) : (
-            <>
-              {state.events && state.events.length > 0 ? (
-                <div className="flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-                  <div className="flex-1 space-y-2">
-                    <Label htmlFor="event">Select Event</Label>
-                    <Select
-                      value={selectedEvent}
-                      onValueChange={setSelectedEvent}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an event" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {state.events.map((event) => (
-                          <SelectItem key={event.id} value={event.id}>
-                            {event.name} ({new Date(event.date).toLocaleDateString()})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-6 text-center border-2 border-dashed rounded-md">
-                  <CalendarX className="w-10 h-10 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-medium mb-1">No Events Available</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    You need to create events in the Admin Panel before you can manage event schedules.
-                  </p>
-                  <Button variant="outline" asChild>
-                    <a href="#" onClick={(e) => {
-                      e.preventDefault();
-                      window.location.href = '#admin';
-                    }}>
-                      Go to Admin Panel
-                    </a>
-                  </Button>
-                </div>
-              )}
-            </>
+            <div className="flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="event">Select Event</Label>
+                <Select
+                  value={selectedEvent}
+                  onValueChange={setSelectedEvent}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an event" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {state.events?.map((event) => (
+                      <SelectItem key={event.id} value={event.id}>
+                        {event.name} ({new Date(event.date).toLocaleDateString()})
+                      </SelectItem>
+                    )) || []}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           )}
           
           {/* DateTime picker for both exams and events */}
@@ -338,7 +311,7 @@ export default function ExamSchedule() {
           <div className="flex justify-end">
             <Button
               onClick={handleGenerateSlots}
-              disabled={!startDateTime || (scheduleType === 'exams' ? !selectedExam : !selectedEvent) || (scheduleType === 'events' && (!state.events || state.events.length === 0))}
+              disabled={!startDateTime || (scheduleType === 'exams' ? !selectedExam : !selectedEvent)}
             >
               Generate {scheduleType === 'exams' ? 'Exam' : 'Event'} Slots
             </Button>
